@@ -4,7 +4,7 @@
 
 <h1 align="center">KOALA</h1>
 <p align="center"><strong>Knowledge-Oriented Australian Literary Analysis</strong></p>
-<p align="center">A native macOS writing studio and Python CLI for scholarly articles and books.</p>
+<p align="center">A native macOS AI writing studio for scholarly articles and books.</p>
 
 KOALA helps develop humanities and social-science manuscripts from an initial idea through research, a guiding abstract, drafting, revision, and export. Start with a detailed brief, import documents and data, or leave optional fields open for the model to develop.
 
