@@ -1,5 +1,5 @@
-<p align="left">
-  <img src="koala-logo.png" alt="KOALA — a koala wearing red glasses and reading a book" width="420">
+<p align="center">
+  <img src="koala-logo.png" alt="KOALA — a koala wearing red glasses and reading a book" width="600">
 </p>
 
 <h1 align="left">KOALA</h1>
