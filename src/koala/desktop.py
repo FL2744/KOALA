@@ -170,7 +170,8 @@ def dispatch(request):
                 rewrite.rewrite(provider,menu.checkpoint() or {},folder,request.get('parameters'),request.get('restart') is True,print)
         elif action == 'rename_project':
             name = validate_project_name(request.get('name'))
-            save(folder/'.koala-project.json', {'name': name})
+            from .project_rename import rename_project
+            folder=rename_project(folder,name)
         elif action == 'develop':
             from .development import generate_proposal
             settings = settings_for(request.get('settings', menu.settings))

@@ -1,0 +1,3 @@
+# Build tooling only; install KOALA itself with pip install .
+pyinstaller==6.22.0
+certifi>=2026.2.25

@@ -53,7 +53,11 @@ func loadRecentProjects() -> [String] {
     @Published var analyses: [[String: Any]] = []
     @Published var selectedAnalyses: Set<String> = []
     @Published var recent: [String] = loadRecentProjects()
-    @Published var root: String = UserDefaults.standard.string(forKey: "engineRoot") ?? (Bundle.main.object(forInfoDictionaryKey: "KOALAProjectRoot") as? String ?? NSHomeDirectory()+"/VIBES/KOALA")
+    var bundledEngine: String? {
+        guard Bundle.main.object(forInfoDictionaryKey:"KOALAStandalone") as? Bool == true else { return nil }
+        return (Bundle.main.resourcePath ?? "")+"/engine/koala-engine"
+    }
+    @Published var root: String = Bundle.main.object(forInfoDictionaryKey:"KOALAStandalone") as? Bool == true ? NSHomeDirectory()+"/Documents/KOALA" : (UserDefaults.standard.string(forKey: "engineRoot") ?? (Bundle.main.object(forInfoDictionaryKey: "KOALAProjectRoot") as? String ?? NSHomeDirectory()+"/VIBES/KOALA"))
     var process: Process?
     var folder: String { project["folder"] as? String ?? "" }
     func projectName(_ path:String) -> String {
@@ -206,16 +210,22 @@ func loadRecentProjects() -> [String] {
     func stop() { guard let process, process.isRunning else { return }; stopping = true; lastMessage = "Stopping… saving the last completed checkpoint"; process.interrupt() }
     func run(_ action: String, extra: [String: Any] = [:], completion: (([String:Any])->Void)? = nil) {
         guard !busy else { return }
-        let executable = root + "/.venv/bin/python"
+        let executable = bundledEngine ?? (root + "/.venv/bin/python")
         guard FileManager.default.isExecutableFile(atPath:executable) else { page="Settings"; error="KOALA’s Python environment was not found. Choose the KOALA project folder in Settings."; return }
         var request: [String:Any] = ["action":action,"folder":folder,"settings":settings]
         for (key,value) in extra { request[key]=value }
         guard let input = try? JSONSerialization.data(withJSONObject:request) else { error="The request could not be encoded."; return }
         let task=Process(), out=Pipe(), stdin=Pipe()
-        task.executableURL=URL(fileURLWithPath:executable); task.arguments=["-u","-m","koala.desktop"]
+        task.executableURL=URL(fileURLWithPath:executable); task.arguments=bundledEngine == nil ? ["-u","-m","koala.desktop"] : []
+        if bundledEngine != nil {
+            do { try FileManager.default.createDirectory(atPath:root,withIntermediateDirectories:true) }
+            catch { self.error="Cannot create KOALA’s project directory: "+error.localizedDescription;return }
+        }
         task.currentDirectoryURL=URL(fileURLWithPath:root)
         var environment=ProcessInfo.processInfo.environment
-        environment["PYTHONPATH"]=root+"/src"; environment["PYTHONDONTWRITEBYTECODE"]="1"
+        if bundledEngine == nil { environment["PYTHONPATH"]=root+"/src" }
+        else { environment.removeValue(forKey:"PYTHONPATH");environment.removeValue(forKey:"PYTHONHOME") }
+        environment["PYTHONDONTWRITEBYTECODE"]="1"
         if !openAIKey.isEmpty { environment["OPENAI_API_KEY"]=openAIKey }
         if !arcKey.isEmpty { environment["ARC_API_KEY"]=arcKey }
         task.environment=environment; task.standardOutput=out; task.standardError=out; task.standardInput=stdin
@@ -584,8 +594,11 @@ struct SettingsView: View {
         TextField("Custom HTTPS API endpoint (optional)",text:$studio.endpoint).textFieldStyle(.roundedBorder)
         if !studio.folder.isEmpty { Button("Save project settings") { if studio.requireSaved() { studio.run("settings",extra:["settings":studio.settings]) } }.buttonStyle(.borderedProminent) }
         Divider()
+        if studio.bundledEngine != nil { Text("Standalone app — Python and document tools are bundled.").font(.callout) }
+        else {
         Text("KOALA engine folder").font(.headline); Text(studio.root).font(.caption).textSelection(.enabled)
         Button("Locate KOALA folder…") { if let url=studio.directory(prompt:"Use KOALA Folder") { studio.root=url.path; UserDefaults.standard.set(url.path,forKey:"engineRoot") } }
+        }
     }.disabled(studio.busy) }
 }
 struct NewProjectView: View {
@@ -657,6 +670,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             CommandMenu("Project") {
                 Button("Show in Finder") { NSWorkspace.shared.open(URL(fileURLWithPath:studio.folder)) }.disabled(studio.folder.isEmpty)
+                Button("Rename Project…") { if studio.requireSaved() { studio.showRenameProject=true } }.disabled(studio.busy || studio.folder.isEmpty)
                 Button("Refresh") { if studio.mayLeave() { studio.run("load") } }.keyboardShortcut("r").disabled(studio.busy || studio.folder.isEmpty)
                 Button("Stop Operation") { studio.stop() }.keyboardShortcut(".").disabled(!studio.busy)
                 Divider()
@@ -899,10 +913,10 @@ struct RenameProjectView: View {
         Text("Rename project").font(.title2.bold())
         if let error=studio.error { Text(error).foregroundStyle(.red) }
         TextField("Project name",text:$name).textFieldStyle(.roundedBorder)
-        Text("This changes the name shown in KOALA and Recent projects. Your folder location, manuscript title, analysis, and saved work stay unchanged.").font(.callout).foregroundStyle(.secondary)
+        Text("This renames the project and its folder, updates saved internal paths, and replaces the old Recent projects entry. Your manuscript title and text stay unchanged.").font(.callout).foregroundStyle(.secondary)
         Text(studio.folder).font(.caption).textSelection(.enabled)
         HStack { Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction); Spacer(); Button("Rename") {
-            studio.run("rename_project",extra:["name":name]) { _ in dismiss() }
+            studio.run("rename_project",extra:["name":name]) { _ in studio.activity=[];studio.log("Project renamed.");dismiss() }
         }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty || name.count>120) }
     }.padding(24).frame(width:500).disabled(studio.busy).onAppear { name=studio.projectName(studio.folder) } }
 }

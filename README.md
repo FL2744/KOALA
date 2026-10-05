@@ -59,7 +59,27 @@ open ~/Applications/KOALA.app
 
 The build script refuses to overwrite an existing app. Move an older build aside before rebuilding. The app uses the Python environment and project directory from which it was built; keep that directory in place. This is a local build, not a notarized standalone installer.
 
+For a distributable app with Python, Pandoc, and export dependencies included, use
+[`macos/build_standalone.py`](macos/build_standalone.py). See the
+[standalone build guide](macos/STANDALONE.md) for setup, testing, supported platforms,
+and signing/notarization requirements. The initial standalone build targets Apple
+Silicon and macOS 26 or later; it is ad-hoc signed and not notarized.
+
 Create or open a project, complete **Brief**, then use **Ideas**, **Inspiration**, **Bibliography**, **Data**, and **Style** as needed. Create the researched abstract before generating the manuscript. Enter provider credentials in **Settings**.
+
+### Opening an unsigned or unnotarized macOS app
+
+The initial standalone KOALA build is ad-hoc signed, but does not yet have an Apple Developer ID signature or notarization. macOS may block its first launch. For a copy you trust and obtained from this project:
+
+1. Unzip the download and move **KOALA.app** to **Applications**. The standalone build includes Python and its dependencies; no separate Python installation is needed.
+2. Double-click **KOALA.app** once. If macOS blocks it because the developer cannot be verified or Apple cannot check it for malicious software, dismiss the alert.
+3. Open **System Settings → Privacy & Security**, scroll to **Security**, and find the message about KOALA.
+4. Click **Open Anyway**, authenticate if asked, and confirm **Open** in the next dialog.
+5. After this approval, launch KOALA normally from Applications.
+
+The **Open Anyway** option is available for about an hour after the blocked launch; try opening KOALA again if it is missing. On a managed Mac, your administrator may restrict this option. This procedure is for an unidentified-developer or notarization warning, not an alert that the app will damage your computer or has been modified or damaged. It does not require disabling Gatekeeper globally.
+
+See Apple’s [instructions for safely opening apps on your Mac](https://support.apple.com/102445). The initial standalone package requires **Apple Silicon and macOS 26 or later**.
 
 ### Menu-driven CLI
 

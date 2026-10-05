@@ -15,3 +15,5 @@ macos/.build/
 authors.txt
 .env.*
 !.env.example
+
+.venv-build/
