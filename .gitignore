@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.env
+output/
+.DS_Store
+
+*.app/
+macos/.build/
+
+# Local research inputs and private configuration
+authors.txt
+.env.*
+!.env.example

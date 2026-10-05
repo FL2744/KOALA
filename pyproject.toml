@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "koala-scholar"
+version = "0.22.0"
+description = "Knowledge-Oriented Australian Literary Analysis"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = ["python-docx>=1.1,<2", "reportlab>=4,<5", "pypdf>=5,<7", "pypandoc_binary>=1.15,<2", "striprtf>=0.0.29,<0.1"]
+
+[project.optional-dependencies]
+test = []
+
+[project.scripts]
+koala = "koala.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+koala = ["styles/*.csl", "styles/*.md"]

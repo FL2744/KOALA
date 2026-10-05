@@ -1,0 +1,29 @@
+{
+  "project_type": "book",
+  "chapter_count": 6,
+  "include_afterword": false,
+  "appendices": [],
+  "target_publishers": [
+    "Scholarly presses and literary studies series"
+  ],
+  "similar_books": [],
+  "topic": "Cultural memory, narrative, and representations of place in Australian literature",
+  "discipline": "Literary and cultural studies",
+  "target_journals": [],
+  "similar_articles": [],
+  "possible_citations": [],
+  "important_authors": [],
+  "important_ideas": [
+    "cultural memory",
+    "place",
+    "narrative form"
+  ],
+  "research_guidance": "Develop a sustained theoretical and interpretive argument across chapters; ground claims in supplied evidence.",
+  "style_guidance": "Scholarly Australian English, precise terminology, and coherent transitions between chapters.",
+  "target_words": 65000,
+  "citation_target": null,
+  "citation_style": "author-date",
+  "source_files": [],
+  "sources_file": "",
+  "inspiration_files": []
+}
