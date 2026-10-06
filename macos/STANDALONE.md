@@ -28,6 +28,33 @@ The initial local package was built for **Apple Silicon (arm64), macOS 26 or
 later**, because its Python runtime targets macOS 26. It has been tested on the
 build Mac, including a relocated copy; it has not been tested on other Macs.
 
+## macOS 15 build (Apple Silicon)
+
+Use a Python runtime and binary dependencies built for macOS 15 or earlier. The
+Homebrew Python used for the original package requires macOS 26; changing the
+app plist alone cannot make that runtime compatible with macOS 15.
+
+The macOS 15 candidate uses CPython 3.13.16 from uv's managed Python distribution:
+
+```bash
+uv python install 3.13.16
+uv venv --python 3.13.16 --managed-python .venv-build-macos15
+uv pip install --python .venv-build-macos15/bin/python -r macos/standalone-requirements.txt .
+.venv-build-macos15/bin/python macos/build_standalone.py --minimum-macos 15.0 --output dist/macos15/KOALA.app
+```
+
+`build_standalone.py` checks every bundled Mach-O binary's deployment target and
+rejects absolute non-system library dependencies. The audit can also be run alone:
+
+```bash
+python macos/audit_bundle.py dist/macos15/KOALA.app --minimum-macos 15.0
+```
+
+These checks catch incompatible runtimes and libraries; they do not replace a
+launch and workflow test on a real macOS 15 Mac. The candidate is Apple Silicon
+only. The build script signs ad hoc; Developer ID signing and notarization are
+separate steps for each newly built artifact.
+
 ## Test
 
 ```bash
@@ -50,8 +77,11 @@ suitable for local testing but may be blocked by Gatekeeper after download.
 For a normal public download, sign embedded executable code and the final app
 with a Developer ID Application identity using hardened runtime, submit the
 archive with `xcrun notarytool`, and staple the accepted ticket before recreating
-the release ZIP. The current machine has no suitable signing identity, so this
-step has not been performed. Do not label the ZIP notarized or universal.
+the release ZIP. A suitable signing identity was unavailable for the original build, so this
+step was not performed for that artifact. The separate v0.22.0-macos15
+prerelease has since been Developer ID signed, notarized, and stapled. Builds
+produced by this script still require those release steps; do not label them
+notarized or universal.
 
 Do not distribute the development app made by `build_app.py` as a standalone
 installer: that build intentionally depends on the local source checkout.

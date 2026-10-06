@@ -63,7 +63,11 @@ For a distributable app with Python, Pandoc, and export dependencies included, u
 [`macos/build_standalone.py`](macos/build_standalone.py). See the
 [standalone build guide](macos/STANDALONE.md) for setup, testing, supported platforms,
 and signing/notarization requirements. The initial standalone build targets Apple
-Silicon and macOS 26 or later; it is ad-hoc signed and not notarized.
+Silicon and macOS 26 or later; it is ad-hoc signed and not notarized. A separate
+[macOS 15+ Apple Silicon prerelease](https://github.com/FL2744/KOALA/releases/tag/v0.22.0-macos15)
+is Developer ID signed and Apple-notarized. It passes binary compatibility checks
+but still needs testing on a macOS 15 Mac. See the
+[macOS 15 build instructions](macos/STANDALONE.md#macos-15-build-apple-silicon).
 
 Create or open a project, complete **Brief**, then use **Ideas**, **Inspiration**, **Bibliography**, **Data**, and **Style** as needed. Create the researched abstract before generating the manuscript. Enter provider credentials in **Settings**.
 

@@ -33,12 +33,12 @@ def notices(root,dest):
                     target=dest/name/str(file);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,target)
     (dest/'dependencies.json').write_text(json.dumps(manifest,indent=2))
     (dest/'Python-license.txt').write_text(__import__('pydoc').render_doc('license'))
-    for path in [Path(sys.base_prefix).resolve()/'LICENSE']+[ancestor/'LICENSE' for ancestor in Path(sys.base_prefix).resolve().parents]:
+    for path in [Path(sys.base_prefix)/f'lib/python{sys.version_info.major}.{sys.version_info.minor}/LICENSE.txt',Path(sysconfig.get_path('stdlib'))/'LICENSE.txt',Path(sys.base_prefix).resolve()/'LICENSE']+[ancestor/'LICENSE' for ancestor in Path(sys.base_prefix).resolve().parents]:
         if path.exists():shutil.copy2(path,dest/'Python-LICENSE');break
     (dest/'README.txt').write_text('KOALA is MIT licensed. Third-party components retain their own licenses. Pandoc is GPL licensed: https://pandoc.org/ and https://github.com/jgm/pandoc . PyInstaller bootloader uses the GPL with its distribution exception: https://pyinstaller.org/en/stable/license.html . Bundled CSL styles are CC BY-SA 3.0. See the individual notices and dependency manifest. This directory includes build-tool notices as well as runtime dependencies.\n')
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,default=Path('dist/KOALA.app'));parser.add_argument('--engine',type=Path,help='Reuse an already frozen backend directory');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,default=Path('dist/KOALA.app'));parser.add_argument('--engine',type=Path,help='Reuse an already frozen backend directory');parser.add_argument('--minimum-macos',help='Minimum supported macOS version; bundled binaries are checked against it');args=parser.parse_args()
     root=Path(__file__).resolve().parents[1];output=args.output.resolve()
     if output.exists():raise SystemExit('Choose a new output path; existing apps are never overwritten.')
     with tempfile.TemporaryDirectory(prefix='koala-standalone-') as tmp:
@@ -53,10 +53,11 @@ def main():
         info_path=app/'Contents/Info.plist'
         with info_path.open('rb') as f:info=plistlib.load(f)
         info.pop('KOALAProjectRoot',None);info['KOALAStandalone']=True
-        minimum=sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET') or platform.mac_ver()[0]
+        minimum=args.minimum_macos or sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET') or platform.mac_ver()[0]
         version_tuple=lambda value:tuple(int(n) for n in value.split('.')[:2])
         info['LSMinimumSystemVersion']=minimum if version_tuple(minimum)>=(13,0) else '13.0'
         with info_path.open('wb') as f:plistlib.dump(info,f)
+        run(sys.executable,root/'macos/audit_bundle.py',app,'--minimum-macos',info['LSMinimumSystemVersion'])
         run('codesign','--force','--deep','--sign','-',app)
         run('codesign','--verify','--deep','--strict',app)
         output.parent.mkdir(parents=True,exist_ok=True);shutil.copytree(app,output,symlinks=True)
