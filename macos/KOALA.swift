@@ -4,6 +4,32 @@ import Darwin
 import UniformTypeIdentifiers
 
 let accent = Color(red: 0.02, green: 0.43, blue: 0.45)
+// Light surfaces keep the writing workspace airy without forcing light mode.
+// Dark mode retains native semantic colors and readable system text.
+enum StudioSurface {
+    static func adaptive(_ light: NSColor, dark: NSColor) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light
+        })
+    }
+    static let canvas = adaptive(NSColor(srgbRed: 0.985, green: 0.990, blue: 0.988, alpha: 1), dark: .windowBackgroundColor)
+    static let sidebar = adaptive(NSColor(srgbRed: 0.950, green: 0.977, blue: 0.973, alpha: 1), dark: .windowBackgroundColor)
+    static let card = adaptive(.white, dark: .controlBackgroundColor)
+    static let border = adaptive(NSColor(srgbRed: 0.82, green: 0.88, blue: 0.86, alpha: 1), dark: .separatorColor)
+}
+
+struct StudioGroupBoxStyle: GroupBoxStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            configuration.label.font(.headline)
+            configuration.content.frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .background(StudioSurface.card, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(StudioSurface.border, lineWidth: 0.75))
+    }
+}
+
 let pages = ["Overview", "Brief", "Generate", "Style", "Prompts", "Outline", "Bibliography", "Data", "Inspiration", "Abstract", "Manuscript", "Rewrite", "Repair", "Export", "Settings"]
 let symbols = ["square.grid.2x2", "pencil.and.list.clipboard", "sparkles", "paintbrush.pointed", "text.quote", "list.bullet.indent", "books.vertical", "tablecells", "doc.on.doc", "text.alignleft", "book.closed", "arrow.triangle.2.circlepath", "wrench.and.screwdriver", "square.and.arrow.up", "slider.horizontal.3"]
 
@@ -297,7 +323,7 @@ struct FieldEditor: View {
     var body: some View { VStack(alignment:.leading,spacing:5) {
         Text(label).font(.headline)
         if !hint.isEmpty { Text(hint).font(.caption).foregroundStyle(.secondary) }
-        TextEditor(text:$text).font(.body).frame(height:height).padding(5).background(Color(nsColor:.textBackgroundColor)).clipShape(RoundedRectangle(cornerRadius:7)).overlay(RoundedRectangle(cornerRadius:7).stroke(Color.gray.opacity(0.25)))
+        TextEditor(text:$text).scrollContentBackground(.hidden).font(.body).frame(height:height).padding(5).background(StudioSurface.card).clipShape(RoundedRectangle(cornerRadius:7)).overlay(RoundedRectangle(cornerRadius:7).stroke(StudioSurface.border, lineWidth:0.75))
     } }
 }
 struct RootView: View {
@@ -312,12 +338,12 @@ struct RootView: View {
                 List(selection:$studio.page) {
                     Section("Workspace") { ForEach(Array(pages.enumerated()),id:\.element) { index,page in Label(page == "Generate" ? "Ideas" : page,systemImage:symbols[index]).tag(page) } }
                     if !studio.recent.isEmpty { Section("Recent projects") { ForEach(studio.recent,id:\.self) { path in Button { studio.openRecent(path) } label:{ Label(studio.projectName(path),systemImage:"folder").lineLimit(1) }.buttonStyle(.plain).disabled(studio.busy).help(path) } } }
-                }.listStyle(.sidebar)
+                }.listStyle(.sidebar).scrollContentBackground(.hidden)
                 VStack(alignment:.leading,spacing:4) { Text("Knowledge-Oriented Australian Literary Analysis").font(.caption2).foregroundStyle(.secondary); Text("Version 0.22.0 · Native macOS").font(.caption2).foregroundStyle(.tertiary) }.padding(14)
-            }.navigationSplitViewColumnWidth(min:210,ideal:235,max:300)
+            }.background(StudioSurface.sidebar).navigationSplitViewColumnWidth(min:210,ideal:235,max:300)
         } detail: {
             VStack(spacing:0) {
-                HStack { VStack(alignment:.leading) { Text(studio.folder.isEmpty ? "Your next manuscript starts here" : studio.projectName(studio.folder)).font(.headline); if !studio.folder.isEmpty { Text(studio.folder).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) } }; Spacer(); if !studio.folder.isEmpty { Button { NSWorkspace.shared.open(URL(fileURLWithPath:studio.folder)) } label:{ Image(systemName:"folder") }.help("Show project in Finder") }; Button { showLog.toggle() } label:{ Image(systemName:"list.bullet.rectangle") }.help("Show or hide activity") }.padding(16)
+                HStack { VStack(alignment:.leading) { Text(studio.folder.isEmpty ? "Your next manuscript starts here" : studio.projectName(studio.folder)).font(.headline); if !studio.folder.isEmpty { Text(studio.folder).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) } }; Spacer(); if !studio.folder.isEmpty { Button { NSWorkspace.shared.open(URL(fileURLWithPath:studio.folder)) } label:{ Image(systemName:"folder") }.help("Show project in Finder") }; Button { showLog.toggle() } label:{ Image(systemName:"list.bullet.rectangle") }.help("Show or hide activity") }.padding(16).background(StudioSurface.card)
                 Divider()
                 ScrollView { Group {
                     if studio.folder.isEmpty && studio.page != "Settings" { WelcomeView() }
@@ -338,12 +364,12 @@ struct RootView: View {
                     case "Settings": SettingsView()
                     default: OverviewView()
                     } }
-                }.frame(maxWidth:1000,alignment:.leading).frame(maxWidth:.infinity) }.background(Color(nsColor:.windowBackgroundColor))
+                }.frame(maxWidth:1000,alignment:.leading).frame(maxWidth:.infinity) }.background(StudioSurface.canvas)
                 Divider()
                 HStack { if studio.busy { ProgressView().controlSize(.small) }; Text(studio.lastMessage).font(.caption).lineLimit(2); Spacer(); if studio.busy { Button(studio.stopping ? "Stopping…" : "Stop",role:.cancel) { studio.stop() }.disabled(studio.stopping) } }.padding(12)
-                if showLog { ScrollViewReader { proxy in ScrollView { Text(studio.activity.joined(separator:"\n")).font(.system(size:11,design:.monospaced)).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.leading).padding(12); Color.clear.frame(height:1).id("end") }.frame(height:125).background(Color(nsColor:.textBackgroundColor)).onChange(of:studio.activity.count) { _ in proxy.scrollTo("end",anchor:.bottom) } } }
+                if showLog { ScrollViewReader { proxy in ScrollView { Text(studio.activity.joined(separator:"\n")).font(.system(size:11,design:.monospaced)).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.leading).padding(12); Color.clear.frame(height:1).id("end") }.frame(height:125).background(StudioSurface.card).onChange(of:studio.activity.count) { _ in proxy.scrollTo("end",anchor:.bottom) } } }
             }
-        }.tint(accent).frame(minWidth:950,minHeight:700)
+        }.tint(accent).groupBoxStyle(StudioGroupBoxStyle()).background(StudioSurface.canvas).frame(minWidth:950,minHeight:700)
         .sheet(isPresented:$studio.newProject) { NewProjectView() }
         .sheet(isPresented:$studio.showRenameProject) { RenameProjectView() }
         .sheet(isPresented:$studio.showBibliography) { BibliographyImportView() }
@@ -361,7 +387,7 @@ struct WelcomeView: View {
         HStack { Button("Create a project") { studio.newProject=true }.buttonStyle(.borderedProminent); Button("Open existing project") { studio.openProject() } }.disabled(studio.busy)
         Text("Bring DOCX, RTF, TXT, HTML or PDF inspiration, specify authors and ideas, or leave the subject open.").foregroundStyle(.secondary).padding(.top,12)
     } }
-    func welcomeCard(_ title:String,_ text:String,_ icon:String)->some View { VStack(alignment:.leading,spacing:12) { Image(systemName:icon).font(.largeTitle).foregroundStyle(accent); Text(title).font(.title2.bold()); Text(text).foregroundStyle(.secondary).frame(maxWidth:.infinity,alignment:.leading) }.padding(22).frame(maxWidth:.infinity,minHeight:180,alignment:.topLeading).background(.background,in:RoundedRectangle(cornerRadius:14)) }
+    func welcomeCard(_ title:String,_ text:String,_ icon:String)->some View { VStack(alignment:.leading,spacing:12) { Image(systemName:icon).font(.largeTitle).foregroundStyle(accent); Text(title).font(.title2.bold()); Text(text).foregroundStyle(.secondary).frame(maxWidth:.infinity,alignment:.leading) }.padding(22).frame(maxWidth:.infinity,minHeight:180,alignment:.topLeading).background(StudioSurface.card,in:RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(StudioSurface.border,lineWidth:0.75)) }
 }
 struct OverviewView: View {
     @EnvironmentObject var studio: Studio
@@ -539,7 +565,7 @@ struct ManuscriptView: View {
             if studio.sections.isEmpty { Text("Your drafted sections will appear here.").foregroundStyle(.secondary).padding(.vertical,24) }
             else {
                 Picker("Section",selection:$sectionIndex) { ForEach(Array(studio.sections.enumerated()),id:\.offset) { i,item in Text(item["heading"] as? String ?? "Section \(i+1)").tag(i) } }
-                Text((studio.project["formatted_sections"] as? [String]).flatMap { $0.indices.contains(sectionIndex) ? $0[sectionIndex] : nil } ?? (studio.sections[min(sectionIndex,studio.sections.count-1)]["text"] as? String ?? "")).font(.system(size:16,design:.serif)).lineSpacing(6).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.leading).padding(22).background(.background,in:RoundedRectangle(cornerRadius:10))
+                Text((studio.project["formatted_sections"] as? [String]).flatMap { $0.indices.contains(sectionIndex) ? $0[sectionIndex] : nil } ?? (studio.sections[min(sectionIndex,studio.sections.count-1)]["text"] as? String ?? "")).font(.system(size:16,design:.serif)).lineSpacing(6).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.leading).padding(22).background(StudioSurface.card,in:RoundedRectangle(cornerRadius:10))
             }
         } else if tab == "Outline" {
             let plan=studio.article["plan"] as? [String:Any] ?? [:]
@@ -579,7 +605,7 @@ struct ExportView: View {
         Toggle("Require all manuscript audit checks to pass",isOn:$strict).disabled(abstractOnly)
         Button("Export selected formats") { if studio.requireSaved() { studio.run("export",extra:["formats":formats.sorted(),"abstract_only":abstractOnly,"strict":strict && !abstractOnly]) } }.buttonStyle(.borderedProminent).disabled(studio.busy || formats.isEmpty || studio.article.isEmpty)
         Text("Every export includes an AI-assistance disclosure. Files are saved in the project folder.").foregroundStyle(.secondary)
-        ForEach(studio.project["exports"] as? [String] ?? [],id:\.self) { path in HStack { Label(URL(fileURLWithPath:path).lastPathComponent,systemImage:"doc"); Spacer(); Button("Open") { NSWorkspace.shared.open(URL(fileURLWithPath:path)) }; Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath:path)]) } }.padding(10).background(.background,in:RoundedRectangle(cornerRadius:8)) }
+        ForEach(studio.project["exports"] as? [String] ?? [],id:\.self) { path in HStack { Label(URL(fileURLWithPath:path).lastPathComponent,systemImage:"doc"); Spacer(); Button("Open") { NSWorkspace.shared.open(URL(fileURLWithPath:path)) }; Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath:path)]) } }.padding(10).background(StudioSurface.card,in:RoundedRectangle(cornerRadius:8)) }
     } }
 }
 struct SettingsView: View {
@@ -590,7 +616,7 @@ struct SettingsView: View {
         Text("Keys stay in memory for this app session. They are never saved in the project or app preferences.").font(.caption).foregroundStyle(.secondary)
         TextField("Model ID",text:$studio.model).textFieldStyle(.roundedBorder)
         HStack { Button("Fetch available models") { studio.run("models") { data in studio.models=data["models"] as? [String] ?? [] } }; TextField("Filter models",text:$studio.modelFilter).textFieldStyle(.roundedBorder) }
-        if !studio.models.isEmpty { ScrollView { LazyVStack(alignment:.leading) { ForEach(studio.models.filter { studio.modelFilter.isEmpty || $0.localizedCaseInsensitiveContains(studio.modelFilter) },id:\.self) { model in Button { studio.model=model } label:{ HStack { Text(model); Spacer(); if model==studio.model { Image(systemName:"checkmark") } }.padding(5) }.buttonStyle(.plain) } } }.frame(height:180).padding(8).background(.background,in:RoundedRectangle(cornerRadius:8)) }
+        if !studio.models.isEmpty { ScrollView { LazyVStack(alignment:.leading) { ForEach(studio.models.filter { studio.modelFilter.isEmpty || $0.localizedCaseInsensitiveContains(studio.modelFilter) },id:\.self) { model in Button { studio.model=model } label:{ HStack { Text(model); Spacer(); if model==studio.model { Image(systemName:"checkmark") } }.padding(5) }.buttonStyle(.plain) } } }.frame(height:180).padding(8).background(StudioSurface.card,in:RoundedRectangle(cornerRadius:8)) }
         TextField("Custom HTTPS API endpoint (optional)",text:$studio.endpoint).textFieldStyle(.roundedBorder)
         if !studio.folder.isEmpty { Button("Save project settings") { if studio.requireSaved() { studio.run("settings",extra:["settings":studio.settings]) } }.buttonStyle(.borderedProminent) }
         Divider()
@@ -741,7 +767,7 @@ struct BibliographyImportView: View {
         Text("Review bibliography").font(.title2.bold())
         Text(studio.bibliographyName).foregroundStyle(.secondary)
         Text("Separate references with a blank line. Remove headings and join wrapped references, especially in PDFs. These entries will be added to Possible citations; duplicates are skipped.").font(.callout)
-        TextEditor(text:$studio.bibliographyText).font(.body).frame(minHeight:260).border(Color.gray.opacity(0.3))
+        TextEditor(text:$studio.bibliographyText).scrollContentBackground(.hidden).font(.body).frame(minHeight:260).padding(5).background(StudioSurface.card).clipShape(RoundedRectangle(cornerRadius:7)).overlay(RoundedRectangle(cornerRadius:7).stroke(StudioSurface.border,lineWidth:0.75))
         if !studio.sections.isEmpty {
             Picker("Use these references",selection:$mode) {
                 Text("Replan manuscript from this bibliography").tag("replan")
